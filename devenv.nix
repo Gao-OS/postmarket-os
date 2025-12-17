@@ -23,6 +23,7 @@
     export PMOS_DEVICES_DIR="$DEVENV_ROOT/devices"
     export PMOS_CURRENT_FILE="$DEVENV_ROOT/.current-device"
     export PMOS_OUT_DIR="$DEVENV_ROOT/out"
+    export PMOS_APORTS_DIR="$DEVENV_ROOT/pmaports"
 
     echo ""
     echo "╔═══════════════════════════════════════════════════════════════╗"
@@ -69,6 +70,13 @@
     _ensure_dirs() {
       mkdir -p "$PMOS_DEVICES_DIR"
       mkdir -p "$PMOS_OUT_DIR"
+      mkdir -p "$PMOS_APORTS_DIR"
+    }
+
+    _pmbootstrap() {
+      local work_dir="$1"
+      shift
+      pmbootstrap --work "$work_dir" --aports "$PMOS_APORTS_DIR" "$@"
     }
 
     cmd="''${1:-help}"
@@ -175,23 +183,30 @@
       init)
         cur=$(_require_current)
         work_dir=$(_work_dir "$cur")
+        _ensure_dirs
         echo "Initializing device: $cur"
-        pmbootstrap --work "$work_dir" init
+        echo "pmaports directory: $PMOS_APORTS_DIR"
+        # Clone pmaports if it doesn't exist
+        if [ ! -d "$PMOS_APORTS_DIR/.git" ]; then
+          echo "Cloning pmaports repository..."
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git "$PMOS_APORTS_DIR"
+        fi
+        _pmbootstrap "$work_dir" init
         ;;
 
       build)
         cur=$(_require_current)
         work_dir=$(_work_dir "$cur")
         echo "Building device: $cur"
-        pmbootstrap --work "$work_dir" install
+        _pmbootstrap "$work_dir" install
         ;;
 
       flash)
         cur=$(_require_current)
         work_dir=$(_work_dir "$cur")
         echo "Flashing device: $cur"
-        pmbootstrap --work "$work_dir" flasher flash_rootfs
-        pmbootstrap --work "$work_dir" flasher flash_kernel
+        _pmbootstrap "$work_dir" flasher flash_rootfs
+        _pmbootstrap "$work_dir" flasher flash_kernel
         ;;
 
       export)
@@ -200,7 +215,7 @@
         out_dir="$PMOS_OUT_DIR/$cur"
         mkdir -p "$out_dir"
         echo "Exporting image: $cur -> $out_dir"
-        pmbootstrap --work "$work_dir" export "$out_dir"
+        _pmbootstrap "$work_dir" export "$out_dir"
         echo "Image exported to: $out_dir"
         ;;
 
@@ -208,7 +223,7 @@
         cur=$(_require_current)
         work_dir=$(_work_dir "$cur")
         echo "Entering chroot: $cur"
-        pmbootstrap --work "$work_dir" chroot
+        _pmbootstrap "$work_dir" chroot
         ;;
 
       status)
@@ -216,14 +231,15 @@
         work_dir=$(_work_dir "$cur")
         echo "Device status: $cur"
         echo "Work directory: $work_dir"
+        echo "pmaports: $PMOS_APORTS_DIR"
         echo ""
-        pmbootstrap --work "$work_dir" config
+        _pmbootstrap "$work_dir" config
         ;;
 
       log)
         cur=$(_require_current)
         work_dir=$(_work_dir "$cur")
-        pmbootstrap --work "$work_dir" log
+        _pmbootstrap "$work_dir" log
         ;;
 
       clean)
@@ -232,7 +248,7 @@
         if [ "$1" = "--all" ]; then
           read -p "Are you sure you want to clean all caches? [y/N] " confirm
           if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-            pmbootstrap --work "$work_dir" zap -p -hc -m -o
+            _pmbootstrap "$work_dir" zap -p -hc -m -o
             echo "All caches cleaned"
           else
             echo "Cancelled"
@@ -240,11 +256,22 @@
         else
           read -p "Are you sure you want to clean build cache? [y/N] " confirm
           if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-            pmbootstrap --work "$work_dir" zap
+            _pmbootstrap "$work_dir" zap
             echo "Build cache cleaned"
           else
             echo "Cancelled"
           fi
+        fi
+        ;;
+
+      update)
+        echo "Updating pmaports repository..."
+        if [ -d "$PMOS_APORTS_DIR/.git" ]; then
+          git -C "$PMOS_APORTS_DIR" pull --rebase
+          echo "pmaports updated"
+        else
+          echo "Error: pmaports not found. Run 'pmos init' first."
+          exit 1
         fi
         ;;
 
@@ -272,6 +299,7 @@
         echo "Maintenance:"
         echo "  pmos clean            Clean build cache"
         echo "  pmos clean --all      Clean all caches (including package cache)"
+        echo "  pmos update           Update pmaports repository"
         echo ""
         echo "  pmos help             Show this help message"
         ;;

@@ -7,6 +7,7 @@ Manage multiple postmarketOS device build environments with a single command. Bu
 - Manage multiple device builds independently (like `nvm` for Node.js)
 - Interactive device selection with fzf
 - Isolated work directories per device
+- Shared pmaports repository for all devices
 - Simple pmbootstrap workflow wrapper
 
 ## Requirements
@@ -50,6 +51,7 @@ pmos flash                      # Flash to device
 | `pmos log` | View build logs |
 | `pmos clean` | Clean build cache |
 | `pmos clean --all` | Clean all caches |
+| `pmos update` | Update pmaports repository |
 | `pmos help` | Show help |
 
 ## Proxy Configuration

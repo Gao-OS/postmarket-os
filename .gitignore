@@ -10,6 +10,7 @@ devenv.lock
 .current-device
 devices/
 out/
+pmaports/
 
 # Editor
 .idea/
