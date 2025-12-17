@@ -1,0 +1,19 @@
+# devenv
+.devenv/
+.devenv.flake.nix
+devenv.lock
+
+# direnv
+.direnv/
+
+# Runtime files
+.current-device
+devices/
+out/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
