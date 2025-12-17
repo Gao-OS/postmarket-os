@@ -1,11 +1,8 @@
 { pkgs, ... }:
 
 {
-  # Environment variables
+  # Environment variables (static)
   env = {
-    PMOS_DEVICES_DIR = "${toString ./.}/devices";
-    PMOS_CURRENT_FILE = "${toString ./.}/.current-device";
-    PMOS_OUT_DIR = "${toString ./.}/out";
     # Proxy configuration (uncomment if needed)
     # HTTP_PROXY = "http://127.0.0.1:3128";
     # HTTPS_PROXY = "http://127.0.0.1:3128";
@@ -22,6 +19,11 @@
 
   # Show help on entering environment
   enterShell = ''
+    # Set runtime paths based on DEVENV_ROOT (the actual project directory)
+    export PMOS_DEVICES_DIR="$DEVENV_ROOT/devices"
+    export PMOS_CURRENT_FILE="$DEVENV_ROOT/.current-device"
+    export PMOS_OUT_DIR="$DEVENV_ROOT/out"
+
     echo ""
     echo "╔═══════════════════════════════════════════════════════════════╗"
     echo "║           postmarketOS Builder Environment Ready              ║"
