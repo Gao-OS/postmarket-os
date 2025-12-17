@@ -27,12 +27,14 @@ pmos rm test-device
 ## Architecture
 
 All functionality is in `devenv.nix`:
-- **env**: Environment variables (`PMOS_DEVICES_DIR`, `PMOS_CURRENT_FILE`, `PMOS_OUT_DIR`)
+- **env**: Static environment variables (proxy settings)
 - **packages**: Dependencies (pmbootstrap, android-tools, qemu, fzf, git)
-- **enterShell**: Welcome message shown on environment entry
+- **enterShell**: Sets runtime paths and shows welcome message
 - **scripts.pmos.exec**: The `pmos` command implementation as a bash case statement
 
 The `pmos` command wraps pmbootstrap with device-specific work directories stored in `devices/<device-name>/`.
+
+**Runtime paths** (`PMOS_DEVICES_DIR`, `PMOS_CURRENT_FILE`, `PMOS_OUT_DIR`) are set in `enterShell` using `$DEVENV_ROOT` - NOT in `env`. Using `${toString ./.}` in `env` would resolve to the Nix store path (read-only).
 
 ## Nix Shell Script Conventions
 
