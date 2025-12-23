@@ -204,6 +204,15 @@
       flash)
         cur=$(_require_current)
         work_dir=$(_work_dir "$cur")
+
+        # Check if rootfs exists before flashing
+        rootfs_dir="$work_dir/chroot_rootfs_$cur"
+        if [ ! -d "$rootfs_dir" ]; then
+          echo "Error: No rootfs found for device '$cur'"
+          echo "Please run 'pmos build' first to generate the rootfs."
+          exit 1
+        fi
+
         echo "Flashing device: $cur"
         _pmbootstrap "$work_dir" flasher flash_rootfs
         _pmbootstrap "$work_dir" flasher flash_kernel
