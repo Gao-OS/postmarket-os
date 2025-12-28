@@ -30,7 +30,69 @@ devenv shell                    # Enter environment
 pmos new pine64-pinephone       # Create device
 pmos init                       # Configure pmbootstrap
 pmos build                      # Build image
+pmos export                     # Export flashable image
 pmos flash                      # Flash to device
+```
+
+## Workflow
+
+### Step 1: Create Device Environment
+
+```bash
+pmos new <device-codename>      # e.g., pmos new oneplus-enchilada
+```
+
+Find device codenames at [postmarketOS Devices](https://wiki.postmarketos.org/wiki/Devices).
+
+### Step 2: Initialize pmbootstrap
+
+```bash
+pmos init
+```
+
+This runs the interactive pmbootstrap configuration where you select:
+- UI (Phosh, Plasma Mobile, GNOME, etc.)
+- Username and hostname
+- Additional packages
+
+### Step 3: Build the Image
+
+```bash
+pmos build
+```
+
+This compiles the kernel, packages, and creates the root filesystem. Build time varies (30 min - 2+ hours depending on device and network).
+
+### Step 4: Export or Flash
+
+**Option A: Export image files**
+```bash
+pmos export
+```
+Creates flashable images in `out/<device>/`.
+
+**Option B: Direct flash** (device connected via USB in fastboot mode)
+```bash
+pmos flash
+```
+
+## Directory Structure
+
+```
+postmarket-os/
+├── devenv.nix              # Main configuration
+├── pmaports/               # Shared pmaports repository (auto-cloned)
+├── devices/                # Per-device work directories
+│   └── <device>/
+│       ├── chroot_native/           # Build chroot (x86_64)
+│       ├── chroot_rootfs_<device>/  # Target rootfs (aarch64/armv7l)
+│       ├── packages/                # Built APK packages
+│       ├── cache_*/                 # Various caches
+│       └── log.txt                  # Build log
+└── out/                    # Exported images
+    └── <device>/
+        ├── <device>.img             # Root filesystem image
+        └── boot.img                 # Boot image (kernel + initramfs)
 ```
 
 ## Commands
@@ -65,11 +127,32 @@ env = {
 };
 ```
 
+## Troubleshooting
+
+**Build fails with network errors**
+```bash
+pmos clean --all    # Clear corrupted cache
+pmos build          # Retry
+```
+
+**Check build logs**
+```bash
+pmos log            # View recent log
+pmos log -f         # Follow log in real-time
+```
+
+**Kernel config issues**
+```bash
+pmbootstrap kconfig check linux-postmarketos-<kernel>
+```
+
 ## Notes
 
 - Each device work directory uses ~5-10GB disk space
-- Build requires network access to Alpine repositories
+- Build requires network access to Alpine/postmarketOS repositories
+- First build downloads ~2GB of packages (cached for subsequent builds)
 - pmbootstrap chroot may have compatibility issues on some NixOS setups
+- Use `pmos clean` to free space, `pmos clean --all` for full reset
 
 ## Resources
 

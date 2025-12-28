@@ -6,6 +6,17 @@
     # Proxy configuration (uncomment if needed)
     # HTTP_PROXY = "http://127.0.0.1:3128";
     # HTTPS_PROXY = "http://127.0.0.1:3128";
+
+    # Explicitly disable proxy (overrides system settings)
+    http_proxy = "";
+    https_proxy = "";
+    ftp_proxy = "";
+    all_proxy = "";
+    rsync_proxy = "";
+    HTTP_PROXY = "";
+    HTTPS_PROXY = "";
+    FTP_PROXY = "";
+    ALL_PROXY = "";
   };
 
   # Dependencies
@@ -222,10 +233,34 @@
         cur=$(_require_current)
         work_dir=$(_work_dir "$cur")
         out_dir="$PMOS_OUT_DIR/$cur"
+        tmp_dir=$(mktemp -d)
         mkdir -p "$out_dir"
+
         echo "Exporting image: $cur -> $out_dir"
-        _pmbootstrap "$work_dir" export "$out_dir"
-        echo "Image exported to: $out_dir"
+        _pmbootstrap "$work_dir" export "$tmp_dir"
+
+        # Copy real files (not broken symlinks) to output directory
+        # Use --sparse=never to ensure full file is copied (not sparse)
+        for f in "$tmp_dir"/*; do
+          if [ -L "$f" ] && [ -e "$f" ]; then
+            # Valid symlink - copy the target file
+            target=$(readlink -f "$f")
+            name=$(basename "$f")
+            echo "Copying: $name"
+            cp --sparse=never "$target" "$out_dir/$name"
+          elif [ -f "$f" ]; then
+            # Regular file
+            name=$(basename "$f")
+            echo "Copying: $name"
+            cp --sparse=never "$f" "$out_dir/$name"
+          fi
+        done
+
+        rm -rf "$tmp_dir"
+
+        echo ""
+        echo "Exported files:"
+        ls -lh "$out_dir"
         ;;
 
       shell)
