@@ -26,13 +26,31 @@ boot.binfmt.emulatedSystems = [ "aarch64-linux" "armv7l-linux" ];
 ## Quick Start
 
 ```bash
-devenv shell                    # Enter environment
+devenv shell                    # Enter FHS environment
 pmos new pine64-pinephone       # Create device
 pmos init                       # Configure pmbootstrap
 pmos build                      # Build image
 pmos export                     # Export flashable image
 pmos flash                      # Flash to device
 ```
+
+## FHS Environment
+
+This project uses `buildFHSEnv` to provide a standard Linux filesystem hierarchy. This ensures compatibility with pmbootstrap and other tools that expect traditional paths like `/usr/bin`.
+
+**Automatic entry**: When you run `devenv shell` interactively, you automatically enter the FHS environment.
+
+**Manual entry**: Use the `pmos-fhs` command to explicitly enter the FHS environment:
+
+```bash
+pmos-fhs                        # Enter FHS shell
+pmos-fhs <command>              # Run command in FHS
+```
+
+**Inside FHS**:
+- pmbootstrap is at `/usr/bin/pmbootstrap`
+- All standard utilities available at expected paths
+- Environment variables (`PMOS_DEVICES_DIR`, etc.) are inherited
 
 ## Workflow
 
@@ -99,6 +117,7 @@ postmarket-os/
 
 | Command | Description |
 |---------|-------------|
+| `pmos-fhs` | Enter FHS environment (auto on interactive shell) |
 | `pmos new <device>` | Create device environment |
 | `pmos use [device]` | Switch device (fzf selection if no argument) |
 | `pmos list` | List all devices |
