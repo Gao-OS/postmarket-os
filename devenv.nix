@@ -1,5 +1,42 @@
-{ pkgs, ... }:
+{ pkgs, lib, config, ... }:
 
+let
+  # FHS environment for pmbootstrap and related tools
+  pmosFhs = pkgs.buildFHSEnv {
+    name = "pmos-fhs";
+    targetPkgs = pkgs: with pkgs; [
+      pmbootstrap
+      android-tools
+      qemu
+      fzf
+      git
+      multipath-tools  # provides kpartx for loop device partitions
+      # Standard utilities
+      coreutils
+      bash
+      gnugrep
+      gnused
+      gawk
+      findutils
+      which
+    ];
+
+    # Profile runs inside /etc/profile in the FHS environment
+    profile = ''
+      # Fix SHELL variable (workaround for buildFHSEnv bug)
+      export SHELL=/bin/bash
+    '';
+
+    # Handle both interactive shell and command execution
+    runScript = pkgs.writeShellScript "pmos-fhs-run" ''
+      if [ $# -eq 0 ]; then
+        exec bash
+      else
+        exec "$@"
+      fi
+    '';
+  };
+in
 {
   # Environment variables (static)
   env = {
@@ -19,14 +56,8 @@
     ALL_PROXY = "";
   };
 
-  # Dependencies
-  packages = with pkgs; [
-    pmbootstrap
-    android-tools
-    qemu
-    fzf
-    git
-  ];
+  # Include FHS environment wrapper
+  packages = [ pmosFhs ];
 
   # Show help on entering environment
   enterShell = ''
@@ -36,9 +67,16 @@
     export PMOS_OUT_DIR="$DEVENV_ROOT/out"
     export PMOS_APORTS_DIR="$DEVENV_ROOT/pmaports"
 
+    # Auto-enter FHS environment if not already in one and running interactively
+    if [ -z "$PMOS_FHS_ACTIVE" ] && [ -t 0 ]; then
+      export PMOS_FHS_ACTIVE=1
+      exec pmos-fhs
+    fi
+
     echo ""
     echo "╔═══════════════════════════════════════════════════════════════╗"
     echo "║           postmarketOS Builder Environment Ready              ║"
+    echo "║                     (FHS Environment)                         ║"
     echo "╠═══════════════════════════════════════════════════════════════╣"
     echo "║  Common commands:                                             ║"
     echo "║    pmos new <device>   - Create device environment            ║"
