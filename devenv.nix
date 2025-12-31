@@ -1,24 +1,36 @@
 { pkgs, lib, config, ... }:
 
 let
+  # Latest pmbootstrap from git (nixpkgs version is outdated)
+  pmbootstrap-latest = pkgs.pmbootstrap.overrideAttrs (oldAttrs: {
+    version = "3.8.0";
+    src = pkgs.fetchFromGitLab {
+      domain = "gitlab.postmarketos.org";
+      owner = "postmarketOS";
+      repo = "pmbootstrap";
+      rev = "3.8.0";
+      hash = "sha256-PbaWqtBcAXnVmB2a2DflQhayvuT3qNBCHaXuDfdrtrY=";
+    };
+  });
+
   # FHS environment for pmbootstrap and related tools
   pmosFhs = pkgs.buildFHSEnv {
     name = "pmos-fhs";
-    targetPkgs = pkgs: with pkgs; [
-      pmbootstrap
-      android-tools
-      qemu
-      fzf
-      git
-      multipath-tools  # provides kpartx for loop device partitions
+    targetPkgs = _: [
+      pmbootstrap-latest
+      pkgs.android-tools
+      pkgs.qemu
+      pkgs.fzf
+      pkgs.git
+      pkgs.multipath-tools  # provides kpartx for loop device partitions
       # Standard utilities
-      coreutils
-      bash
-      gnugrep
-      gnused
-      gawk
-      findutils
-      which
+      pkgs.coreutils
+      pkgs.bash
+      pkgs.gnugrep
+      pkgs.gnused
+      pkgs.gawk
+      pkgs.findutils
+      pkgs.which
     ];
 
     # Profile runs inside /etc/profile in the FHS environment
@@ -56,8 +68,17 @@ in
     ALL_PROXY = "";
   };
 
-  # Include FHS environment wrapper
-  packages = [ pmosFhs ];
+  # Include build tools and FHS environment wrapper
+  packages = with pkgs; [
+    pmosFhs
+    # Build tools (also available outside FHS)
+    pmbootstrap-latest
+    android-tools
+    qemu
+    fzf
+    git
+    multipath-tools
+  ];
 
   # Show help on entering environment
   enterShell = ''
@@ -67,16 +88,13 @@ in
     export PMOS_OUT_DIR="$DEVENV_ROOT/out"
     export PMOS_APORTS_DIR="$DEVENV_ROOT/pmaports"
 
-    # Auto-enter FHS environment if not already in one and running interactively
-    if [ -z "$PMOS_FHS_ACTIVE" ] && [ -t 0 ]; then
-      export PMOS_FHS_ACTIVE=1
-      exec pmos-fhs
-    fi
+    # FHS environment is available via 'pmos-fhs' command
+    # NOTE: Do NOT auto-enter FHS because it blocks sudo (required by pmbootstrap)
+    # Use 'pmos-fhs' manually only when you need FHS paths (e.g., for some tools)
 
     echo ""
     echo "╔═══════════════════════════════════════════════════════════════╗"
     echo "║           postmarketOS Builder Environment Ready              ║"
-    echo "║                     (FHS Environment)                         ║"
     echo "╠═══════════════════════════════════════════════════════════════╣"
     echo "║  Common commands:                                             ║"
     echo "║    pmos new <device>   - Create device environment            ║"
@@ -247,7 +265,16 @@ in
         cur=$(_require_current)
         work_dir=$(_work_dir "$cur")
         echo "Building device: $cur"
-        _pmbootstrap "$work_dir" install
+        # Check for --password flag for non-interactive builds
+        if [ -n "$1" ] && [ "$1" = "--password" ]; then
+          shift
+          password="''${1:-147258}"
+          shift || true
+          echo "Using non-interactive mode with provided password"
+          _pmbootstrap "$work_dir" install --password "$password" "$@"
+        else
+          _pmbootstrap "$work_dir" install "$@"
+        fi
         ;;
 
       flash)
@@ -346,6 +373,13 @@ in
         fi
         ;;
 
+      pull)
+        cur=$(_require_current)
+        work_dir=$(_work_dir "$cur")
+        echo "Pulling latest packages for: $cur"
+        _pmbootstrap "$work_dir" pull
+        ;;
+
       update)
         echo "Updating pmaports repository..."
         if [ -d "$PMOS_APORTS_DIR/.git" ]; then
@@ -369,7 +403,8 @@ in
         echo ""
         echo "Build Operations:"
         echo "  pmos init             Initialize pmbootstrap (interactive config)"
-        echo "  pmos build            Build system image"
+        echo "  pmos build            Build system image (requires sudo)"
+        echo "  pmos build --password <pass>  Non-interactive build with password"
         echo "  pmos flash            Flash to device"
         echo "  pmos export           Export image to out/ directory"
         echo ""
@@ -379,9 +414,10 @@ in
         echo "  pmos log              View build logs"
         echo ""
         echo "Maintenance:"
+        echo "  pmos pull             Pull latest binary packages"
+        echo "  pmos update           Update pmaports repository"
         echo "  pmos clean            Clean build cache"
         echo "  pmos clean --all      Clean all caches (including package cache)"
-        echo "  pmos update           Update pmaports repository"
         echo ""
         echo "  pmos help             Show this help message"
         ;;

@@ -165,6 +165,20 @@ pmos log -f         # Follow log in real-time
 pmbootstrap kconfig check linux-postmarketos-<kernel>
 ```
 
+**sudo: "no new privileges" error**
+
+pmbootstrap requires sudo for chroot operations. If you see this error, you're in a sandboxed environment. Run the build in a regular terminal:
+```bash
+devenv shell
+pmos build --password "your-password"  # Non-interactive
+# OR
+pmos build                              # Interactive (prompts for password)
+```
+
+**FHS environment limitations**
+
+The `pmos-fhs` wrapper uses Linux namespaces which block sudo. For build operations, stay in the regular devenv shell (don't enter `pmos-fhs` manually for builds).
+
 ## Notes
 
 - Each device work directory uses ~5-10GB disk space
