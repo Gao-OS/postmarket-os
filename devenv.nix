@@ -363,10 +363,11 @@ in
             echo "Cancelled"
           fi
         else
-          read -p "Are you sure you want to clean build cache? [y/N] " confirm
+          # Include -hc to clean http cache (fixes stale apk version errors)
+          read -p "Are you sure you want to clean chroots and http cache? [y/N] " confirm
           if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-            _pmbootstrap "$work_dir" zap
-            echo "Build cache cleaned"
+            _pmbootstrap "$work_dir" zap -hc
+            echo "Chroots and http cache cleaned"
           else
             echo "Cancelled"
           fi
@@ -416,8 +417,8 @@ in
         echo "Maintenance:"
         echo "  pmos pull             Pull latest binary packages"
         echo "  pmos update           Update pmaports repository"
-        echo "  pmos clean            Clean build cache"
-        echo "  pmos clean --all      Clean all caches (including package cache)"
+        echo "  pmos clean            Clean chroots and http cache"
+        echo "  pmos clean --all      Clean all caches (including packages)"
         echo ""
         echo "  pmos help             Show this help message"
         ;;
